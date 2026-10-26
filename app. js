@@ -1,0 +1,92 @@
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+// STEP 1: Replace these two placeholders with Supabase Project URL and publishable/anon key.
+// Never put a service_role / secret key in browser code.
+const SUPABASE_URL = "https://znikguhitibkpkpjspgz.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_6leDOQMi5Qs1oaXN5DApjQ_9wfK4sUz";
+const configured = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("PASTE_") && !SUPABASE_ANON_KEY.includes("PASTE_");
+const sb = configured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+const $ = id => document.getElementById(id);
+let session = null, customers = [], contracts = [], payments = [];
+const money = n => "Rs " + Math.round(Number(n)||0).toLocaleString("en-PK");
+const today = new Date().toISOString().slice(0,10);
+$("dueDate").value = today;
+if (configured) $("configWarning").classList.add("hidden");
+function message(id, text){$(id).textContent=text;$(id).classList.remove("hidden")}
+function plan(){
+ const cash=Number($("cashPrice").value)||0, months=Number($("months").value)||1, rate=Number($("rate").value)||0, advance=Number($("advance").value)||0;
+ const profit=cash*rate*months/100, total=cash+profit, balance=total-advance, qist=balance/months;
+ $("calcPreview").textContent=`Profit: ${money(profit)} | Total installment price: ${money(total)} | Balance after advance: ${money(balance)} | Monthly qist (estimate): ${money(qist)}`;
+ return {cash,months,rate,advance,profit,total,balance,qist};
+}
+["cashPrice","months","rate","advance"].forEach(id=>$(id).addEventListener("input",plan));
+$("loginBtn").onclick=()=>auth("login");
+$("signupBtn").onclick=()=>auth("signup");
+async function auth(mode){
+ if(!sb){message("loginMsg","Setup incomplete: app.js mein Supabase URL aur publishable/anon key set karein.");return}
+ const email=$("email").value.trim(), password=$("password").value;
+ if(!email||!password){message("loginMsg","Email aur password enter karein.");return}
+ const result=mode==="login"?await sb.auth.signInWithPassword({email,password}):await sb.auth.signUp({email,password});
+ if(result.error){message("loginMsg",result.error.message);return}
+ if(mode==="signup"&&!result.data.session){message("loginMsg","Account request ho gayi. Agar email confirmation on hai to inbox check karein, phir login karein.");return}
+ session=result.data.session; await showApp();
+}
+$("logoutBtn").onclick=async()=>{await sb.auth.signOut();session=null;$("appArea").classList.add("hidden");$("loginCard").classList.remove("hidden")};
+async function showApp(){
+ if(!sb)return;
+ const {data}=await sb.auth.getSession();session=data.session;
+ if(!session){$("appArea").classList.add("hidden");$("loginCard").classList.remove("hidden");return}
+ $("loginCard").classList.add("hidden");$("appArea").classList.remove("hidden");await loadAll();
+}
+async function loadAll(){
+ const [c,k,p]=await Promise.all([
+ sb.from("customers").select("*").order("created_at",{ascending:false}),
+ sb.from("installment_contracts").select("*").order("created_at",{ascending:false}),
+ sb.from("payments").select("*").order("paid_at",{ascending:false})
+ ]);
+ const err=[c,k,p].find(x=>x.error);
+ if(err){alert("Database error: "+err.error.message+" — SQL schema run hua hai?");return}
+ customers=c.data||[];contracts=k.data||[];payments=p.data||[];render();
+}
+function render(){
+ $("customerCount").textContent=customers.length;
+ $("balanceTotal").textContent=money(contracts.reduce((s,x)=>s+Math.max(0,Number(x.total_price)-Number(x.advance_paid)-payments.filter(p=>p.contract_id===x.id).reduce((a,p)=>a+Number(p.amount),0)),0));
+ $("paidTotal").textContent=money(payments.reduce((s,p)=>s+Number(p.amount),0));
+ const query=$("searchBox").value.toLowerCase();
+ const rows=customers.filter(c=>(c.full_name+" "+c.phone+" "+c.address).toLowerCase().includes(query)).map(c=>{
+  const k=contracts.find(x=>x.customer_id===c.id); if(!k)return "";
+  const paid=Number(k.advance_paid)+payments.filter(p=>p.contract_id===k.id).reduce((s,p)=>s+Number(p.amount),0);
+  const bal=Math.max(0,Number(k.total_price)-paid);
+  return `<tr><td><b>${esc(c.full_name)}</b><br>${esc(c.phone)}<br><span class="small">${esc(c.address||"")}</span></td><td>${esc(k.mobile_model)}<br><span class="small">IMEI: ${esc(k.imei||"—")}</span></td><td>${money(k.total_price)}<br>${k.months} months<br><span class="small">Qist est. ${money((Number(k.total_price)-Number(k.advance_paid))/Number(k.months))}</span></td><td>${money(paid)}</td><td><b>${money(bal)}</b></td><td>${esc(k.next_due_date||"—")}</td><td><button data-pay="${k.id}" data-name="${esc(c.full_name)}">Receive payment</button><button class="secondary" data-detail="${c.id}">Details</button></td></tr>`;
+ }).join("");
+ $("customersBody").innerHTML=rows||'<tr><td colspan="7">No customers found.</td></tr>';
+ $("paymentsBody").innerHTML=payments.map(p=>{const c=customers.find(x=>x.id===p.customer_id);return `<tr><td>${esc((p.paid_at||"").slice(0,10))}</td><td>${esc(c?.full_name||"Customer")}</td><td>${money(p.amount)}</td><td>${esc(p.note||"")}</td></tr>`}).join("")||'<tr><td colspan="4">No payments recorded.</td></tr>';
+ document.querySelectorAll("[data-pay]").forEach(b=>b.onclick=()=>receive(b.dataset.pay,b.dataset.name));
+ document.querySelectorAll("[data-detail]").forEach(b=>b.onclick=()=>details(b.dataset.detail));
+}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+$("searchBox").addEventListener("input",render);
+$("customerForm").onsubmit=async e=>{
+ e.preventDefault();if(!session){alert("Please login first.");return}
+ const v=plan();if(v.advance>v.total){alert("Advance total installment price se zyada nahi ho sakta.");return}
+ const {data:c,error:ce}=await sb.from("customers").insert({full_name:$("cName").value.trim(),phone:$("cPhone").value.trim(),address:$("cAddress").value.trim()||null,guarantor_name:$("gName").value.trim()||null,guarantor_phone:$("gPhone").value.trim()||null}).select().single();
+ if(ce){alert("Customer save error: "+ce.message);return}
+ const {error:ke}=await sb.from("installment_contracts").insert({customer_id:c.id,mobile_model:$("model").value.trim(),imei:$("imei").value.trim()||null,cash_price:v.cash,profit_rate_monthly:v.rate,months:v.months,total_price:v.total,advance_paid:v.advance,next_due_date:$("dueDate").value});
+ if(ke){alert("Plan save error: "+ke.message+"; customer record may have saved. Contact support/admin before retrying.");return}
+ $("customerForm").reset();$("months").value="6";$("rate").value="5";$("advance").value="0";$("dueDate").value=today;plan();await loadAll();alert("Customer aur qist plan save ho gaya.");
+};
+async function receive(contractId,name){
+ const amount=prompt(`${name} se kitni payment receive hui? (Rs)`);
+ if(amount===null)return;const n=Number(amount);if(!Number.isFinite(n)||n<=0){alert("Valid amount enter karein.");return}
+ const note=prompt("Receipt note / transaction reference (optional):")||"";
+ const c=contracts.find(x=>x.id===contractId);
+ const {error}=await sb.from("payments").insert({contract_id:contractId,customer_id:c.customer_id,amount:n,note,paid_at:new Date().toISOString()});
+ if(error){alert("Payment save error: "+error.message);return}
+ await loadAll();alert("Payment record save ho gaya.");
+}
+function details(customerId){
+ const c=customers.find(x=>x.id===customerId),k=contracts.find(x=>x.customer_id===customerId);if(!c||!k)return;
+ const ps=payments.filter(p=>p.contract_id===k.id), paid=Number(k.advance_paid)+ps.reduce((s,p)=>s+Number(p.amount),0);
+ alert(`Customer: ${c.full_name}\nPhone: ${c.phone}\nAddress: ${c.address||"—"}\nGuarantor: ${c.guarantor_name||"—"}\nModel: ${k.mobile_model}\nIMEI: ${k.imei||"—"}\nTotal price: ${money(k.total_price)}\nAdvance: ${money(k.advance_paid)}\nAdditional payments: ${money(ps.reduce((s,p)=>s+Number(p.amount),0))}\nTotal paid: ${money(paid)}\nBalance: ${money(Math.max(0,Number(k.total_price)-paid))}\nDue date: ${k.next_due_date||"—"}`);
+}
+if(sb){sb.auth.onAuthStateChange((_event,newSession)=>{session=newSession;showApp()});showApp()}
