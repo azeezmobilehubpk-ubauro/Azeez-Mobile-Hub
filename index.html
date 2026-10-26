@@ -3,146 +3,178 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#123c70">
 <title>Azeez Mobile Hub</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#f1f5f9;color:#172033;font-family:Arial,sans-serif}
-header{background:#123c70;color:white;text-align:center;padding:22px 14px}
-header h2{margin:0 0 7px}
-header p{margin:0;font-size:13px}
-main{max-width:520px;margin:18px auto;padding:0 13px 30px}
-.card{background:white;padding:17px;border-radius:14px;margin-bottom:15px;box-shadow:0 3px 12px #0000000b}
-h3{margin:0 0 13px}
-label{display:block;font-size:14px;font-weight:bold;margin:13px 0 6px}
-input,select{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;font-size:16px;background:white}
-.result{display:flex;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid #e2e8f0}
-.result span{color:#475569}
-.result strong{text-align:right}
-.big{font-size:20px;color:#1764b0}
-.note{font-size:12px;line-height:1.5;color:#64748b}
-button{padding:12px;border:0;border-radius:8px;font-size:15px;font-weight:bold;cursor:pointer}
-.primary{width:100%;background:#1764b0;color:white;margin-top:16px}
-.secondary{width:100%;background:#e2e8f0;color:#172033;margin-top:9px}
-footer{text-align:center;color:#64748b;font-size:12px;padding:10px}
+header{background:#123c70;color:white;padding:20px 16px}
+header h1{margin:0;font-size:24px}
+header p{margin:7px 0 0;font-size:14px}
+main{max-width:1000px;margin:auto;padding:14px}
+.card{background:white;padding:16px;margin:14px 0;border-radius:12px;box-shadow:0 2px 8px #0001}
+h2{font-size:20px;margin:4px 0 14px}
+h3{font-size:17px;margin:4px 0 14px}
+label{display:block;font-size:14px;font-weight:bold;margin:12px 0 6px}
+input,select,button{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;font-size:16px;background:white}
+button{background:#123c70;color:white;border:0;font-weight:bold;margin-top:10px;cursor:pointer}
+button.secondary{background:#475569}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.hidden{display:none!important}
+.note{font-size:13px;color:#64748b;line-height:1.5}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.stat{background:#eff6ff;padding:13px;border-radius:9px;overflow-wrap:anywhere}
+.stat span{display:block;font-size:13px;color:#475569}
+.stat strong{display:block;margin-top:7px;font-size:18px}
+.result{padding:9px 0;border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere}
+table{width:100%;border-collapse:collapse;min-width:700px}
+th,td{text-align:left;padding:10px;border-bottom:1px solid #e2e8f0;font-size:13px}
+.tablewrap{overflow-x:auto}
+.small{font-size:12px;color:#64748b}
+footer{text-align:center;padding:22px;color:#64748b}
 </style>
 </head>
 <body>
 <header>
-<h2>Azeez Mobile Hub</h2>
-<p>Mobile Installment Calculator</p>
+<h1>Azeez Mobile Hub</h1>
+<p>Mobile Installments & Customer Records</p>
 </header>
-<main>
-<div class="card">
-<h3>Mobile Details</h3>
 
+<main>
+<div id="configWarning" class="card">
+<strong>Setup notice</strong>
+<p class="note">Supabase settings check karein.</p>
+</div>
+
+<section id="loginCard" class="card">
+<h2>Business Login</h2>
+<p class="note">Apna business account banayein ya login karein.</p>
+<label>Email</label>
+<input id="email" type="email" placeholder="Business email" autocomplete="email">
+<label>Password</label>
+<input id="password" type="password" placeholder="Password" autocomplete="current-password">
+<button id="loginBtn" type="button">Login</button>
+<button id="signupBtn" class="secondary" type="button">Create Account</button>
+<p id="loginMsg" class="note"></p>
+</section>
+
+<section id="appArea" class="hidden">
+<div class="card">
+<button id="logoutBtn" class="secondary" type="button">Logout</button>
+<h2>Business Summary</h2>
+<div class="stats">
+<div class="stat"><span>Total customers</span><strong id="customerCount">0</strong></div>
+<div class="stat"><span>Total received</span><strong id="paidTotal">Rs 0</strong></div>
+<div class="stat"><span>Remaining balance</span><strong id="balanceTotal">Rs 0</strong></div>
+</div>
+</div>
+
+<div class="card">
+<h2>Installment Calculator</h2>
+<div class="grid">
+<div>
 <label>Mobile Model</label>
 <input id="model" placeholder="e.g. Samsung A15">
-
+</div>
+<div>
 <label>Cash Price (Rs)</label>
-<input id="cash" type="number" min="1" step="any"
-placeholder="50000" oninput="calculate()">
-
+<input id="cashPrice" type="number" min="1" placeholder="50000">
+</div>
+<div>
+<label>Profit per month (%)</label>
+<input id="rate" type="number" min="0" step="any" value="5">
+</div>
+<div>
 <label>Installment Duration</label>
-<select id="months" onchange="calculate()">
-<option value="1">1 Month</option>
-<option value="2">2 Months</option>
-<option value="3">3 Months</option>
-<option value="4">4 Months</option>
-<option value="5" selected>5 Months</option>
-<option value="6">6 Months</option>
-<option value="7">7 Months</option>
-<option value="8">8 Months</option>
-<option value="9">9 Months</option>
-<option value="10">10 Months</option>
-<option value="11">11 Months</option>
-<option value="12">12 Months</option>
+<select id="months">
+<option value="3">3 months</option>
+<option value="6" selected>6 months</option>
+<option value="9">9 months</option>
+<option value="12">12 months</option>
 </select>
-
-<label>Advance Percentage (%)</label>
-<input id="advanceRate" type="number" min="0" max="100"
-value="20" oninput="calculate()">
-
-<p class="note">Automatic profit rule: har mahine cash price ka 5% profit. Misal: 5 months = 25%, 10 months = 50%.</p>
+</div>
+<div>
+<label>Advance Payment (Rs)</label>
+<input id="advance" type="number" min="0" value="0">
+</div>
+</div>
+<p id="calcPreview" class="note">Mobile price enter karein.</p>
 </div>
 
 <div class="card">
-<h3>Calculation Result</h3>
-<div class="result"><span>Mobile</span><strong id="rmodel">-</strong></div>
-<div class="result"><span>Cash Price</span><strong id="rcash">Rs 0</strong></div>
-<div class="result"><span>Profit Percentage</span><strong id="rrate">0%</strong></div>
-<div class="result"><span>Profit Amount</span><strong id="rprofit">Rs 0</strong></div>
-<div class="result"><span>Selling Price</span><strong id="rsale" class="big">Rs 0</strong></div>
-<div class="result"><span>Advance Payment</span><strong id="radv">Rs 0</strong></div>
-<div class="result"><span>Remaining Amount</span><strong id="rremain">Rs 0</strong></div>
-<div class="result"><span>Monthly Installment</span><strong id="rmonthly" class="big">Rs 0</strong></div>
-
-<button class="primary" onclick="window.print()">Print / Save PDF</button>
-<button class="secondary" onclick="shareResult()">Share Calculation</button>
-<p class="note">Profit amount doosre business kharchon se pehle ka hai. Monthly qist do decimal places tak dikhayi jati hai.</p>
+<h2>Register New Customer</h2>
+<form id="customerForm">
+<div class="grid">
+<div>
+<label>Customer Full Name *</label>
+<input id="cName" required placeholder="Customer name">
 </div>
-<footer>Azeez Mobile Hub</footer>
+<div>
+<label>Mobile Number *</label>
+<input id="cPhone" required type="tel" placeholder="03XXXXXXXXX">
+</div>
+<div>
+<label>Address</label>
+<input id="cAddress" placeholder="Customer address">
+</div>
+<div>
+<label>Guarantor Name</label>
+<input id="gName" placeholder="Guarantor full name">
+</div>
+<div>
+<label>Guarantor Phone</label>
+<input id="gPhone" type="tel" placeholder="03XXXXXXXXX">
+</div>
+<div>
+<label>Mobile Model *</label>
+<input id="modelFormHelp" placeholder="Enter model above" disabled>
+<p class="note">Mobile model upar calculator mein enter karein.</p>
+</div>
+<div>
+<label>IMEI Number</label>
+<input id="imei" placeholder="Mobile IMEI">
+</div>
+<div>
+<label>Next Due Date</label>
+<input id="dueDate" type="date">
+</div>
+</div>
+<button type="submit">Save Customer & Installment Plan</button>
+<p class="note">Customer ka record save karne se pehle naam, number aur mobile ki price check kar lein.</p>
+</form>
+</div>
+
+<div class="card">
+<h2>Customer Records</h2>
+<label>Search by name, phone or address</label>
+<input id="searchBox" placeholder="Search customer...">
+<div class="tablewrap">
+<table>
+<thead><tr>
+<th>Customer</th><th>Mobile</th><th>Plan</th><th>Paid</th><th>Balance</th><th>Due Date</th><th>Action</th>
+</tr></thead>
+<tbody id="customersBody">
+<tr><td colspan="7">Login to load records.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<div class="card">
+<h2>Payment History</h2>
+<div class="tablewrap">
+<table>
+<thead><tr><th>Date</th><th>Customer</th><th>Amount</th><th>Note</th></tr></thead>
+<tbody id="paymentsBody">
+<tr><td colspan="4">No payments loaded.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
 </main>
-
-<script>
-function money(n){
- return "Rs "+Math.round(n).toLocaleString("en-PK");
-}
-function calculate(){
- const model=document.getElementById("model").value.trim()||"Mobile";
- const cashInput=document.getElementById("cash").value;
- const cash=Number(cashInput);
- const months=Number(document.getElementById("months").value);
- const advRate=Number(document.getElementById("advanceRate").value);
-
- document.getElementById("rmodel").textContent=model;
-
- if(cashInput===""||!Number.isFinite(cash)||cash<=0||
- !Number.isFinite(advRate)||advRate<0||advRate>100){
-  ["rcash","rprofit","rsale","radv","rremain","rmonthly"]
-  .forEach(id=>document.getElementById(id).textContent="Rs 0");
-  document.getElementById("rrate").textContent="0%";
-  return;
- }
-
- const rate=months*5;
- const profit=cash*rate/100;
- const sale=cash+profit;
- const advance=sale*advRate/100;
- const remaining=sale-advance;
- const monthly=remaining/months;
-
- document.getElementById("rcash").textContent=money(cash);
- document.getElementById("rrate").textContent=rate+"%";
- document.getElementById("rprofit").textContent=money(profit);
- document.getElementById("rsale").textContent=money(sale);
- document.getElementById("radv").textContent=money(advance);
- document.getElementById("rremain").textContent=money(remaining);
- document.getElementById("rmonthly").textContent=
- "Rs "+monthly.toLocaleString("en-PK",{minimumFractionDigits:2,maximumFractionDigits:2});
-}
-function shareResult(){
- const text=[
- "Azeez Mobile Hub",
- "Mobile: "+document.getElementById("rmodel").textContent,
- "Cash Price: "+document.getElementById("rcash").textContent,
- "Profit: "+document.getElementById("rrate").textContent+
- " ("+document.getElementById("rprofit").textContent+")",
- "Selling Price: "+document.getElementById("rsale").textContent,
- "Advance: "+document.getElementById("radv").textContent,
- "Remaining: "+document.getElementById("rremain").textContent,
- "Monthly Qist: "+document.getElementById("rmonthly").textContent
- ].join("\n");
- if(navigator.share){
-  navigator.share({title:"Azeez Mobile Hub",text}).catch(()=>{});
- }else if(navigator.clipboard){
-  navigator.clipboard.writeText(text).then(()=>alert("Calculation copied."));
- }else{
-  alert(text);
- }
-}
-calculate();
-</script>
+<footer>Azeez Mobile Hub</footer>
+<script type="module" src="app.js"></script>
 </body>
 </html>
