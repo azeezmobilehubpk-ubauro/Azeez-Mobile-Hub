@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#123c70">
-<title>Azeez Mobile Hub Calculator</title>
+<title>Azeez Mobile Hub</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#f1f5f9;color:#172033;font-family:Arial,sans-serif}
@@ -44,29 +44,34 @@ footer{text-align:center;color:#64748b;font-size:12px;padding:10px}
 <input id="cash" type="number" min="1" step="any"
 placeholder="50000" oninput="calculate()">
 
-<label>Profit Percentage (%)</label>
-<input id="profitRate" type="number" min="0" step="any"
-value="50" oninput="calculate()">
+<label>Installment Duration</label>
+<select id="months" onchange="calculate()">
+<option value="1">1 Month</option>
+<option value="2">2 Months</option>
+<option value="3">3 Months</option>
+<option value="4">4 Months</option>
+<option value="5" selected>5 Months</option>
+<option value="6">6 Months</option>
+<option value="7">7 Months</option>
+<option value="8">8 Months</option>
+<option value="9">9 Months</option>
+<option value="10">10 Months</option>
+<option value="11">11 Months</option>
+<option value="12">12 Months</option>
+</select>
 
 <label>Advance Percentage (%)</label>
 <input id="advanceRate" type="number" min="0" max="100"
 value="20" oninput="calculate()">
 
-<label>Installment Duration</label>
-<select id="months" onchange="calculate()">
-<option value="3">3 Months</option>
-<option value="6" selected>6 Months</option>
-<option value="9">9 Months</option>
-<option value="12">12 Months</option>
-</select>
-
-<p class="note">Selling price cash price aur profit percentage se automatically calculate hoti hai.</p>
+<p class="note">Automatic profit rule: har mahine cash price ka 5% profit. Misal: 5 months = 25%, 10 months = 50%.</p>
 </div>
 
 <div class="card">
 <h3>Calculation Result</h3>
 <div class="result"><span>Mobile</span><strong id="rmodel">-</strong></div>
 <div class="result"><span>Cash Price</span><strong id="rcash">Rs 0</strong></div>
+<div class="result"><span>Profit Percentage</span><strong id="rrate">0%</strong></div>
 <div class="result"><span>Profit Amount</span><strong id="rprofit">Rs 0</strong></div>
 <div class="result"><span>Selling Price</span><strong id="rsale" class="big">Rs 0</strong></div>
 <div class="result"><span>Advance Payment</span><strong id="radv">Rs 0</strong></div>
@@ -75,7 +80,7 @@ value="20" oninput="calculate()">
 
 <button class="primary" onclick="window.print()">Print / Save PDF</button>
 <button class="secondary" onclick="shareResult()">Share Calculation</button>
-<p class="note">Amounts rupees mein hain. Monthly qist do decimal places tak dikhayi jati hai. Profit se business ke doosre kharche minus nahi kiye gaye.</p>
+<p class="note">Profit amount doosre business kharchon se pehle ka hai. Monthly qist do decimal places tak dikhayi jati hai.</p>
 </div>
 <footer>Azeez Mobile Hub</footer>
 </main>
@@ -86,42 +91,44 @@ function money(n){
 }
 function calculate(){
  const model=document.getElementById("model").value.trim()||"Mobile";
- const cash=Number(document.getElementById("cash").value);
- const rate=Number(document.getElementById("profitRate").value);
- const advRate=Number(document.getElementById("advanceRate").value);
+ const cashInput=document.getElementById("cash").value;
+ const cash=Number(cashInput);
  const months=Number(document.getElementById("months").value);
+ const advRate=Number(document.getElementById("advanceRate").value);
 
- if(document.getElementById("cash").value==="" ||
- !Number.isFinite(cash)||cash<=0||
- !Number.isFinite(rate)||rate<0||
+ document.getElementById("rmodel").textContent=model;
+
+ if(cashInput===""||!Number.isFinite(cash)||cash<=0||
  !Number.isFinite(advRate)||advRate<0||advRate>100){
   ["rcash","rprofit","rsale","radv","rremain","rmonthly"]
-   .forEach(id=>document.getElementById(id).textContent="Rs 0");
-  document.getElementById("rmodel").textContent=model;
+  .forEach(id=>document.getElementById(id).textContent="Rs 0");
+  document.getElementById("rrate").textContent="0%";
   return;
  }
 
+ const rate=months*5;
  const profit=cash*rate/100;
  const sale=cash+profit;
  const advance=sale*advRate/100;
  const remaining=sale-advance;
  const monthly=remaining/months;
 
- document.getElementById("rmodel").textContent=model;
  document.getElementById("rcash").textContent=money(cash);
+ document.getElementById("rrate").textContent=rate+"%";
  document.getElementById("rprofit").textContent=money(profit);
  document.getElementById("rsale").textContent=money(sale);
  document.getElementById("radv").textContent=money(advance);
  document.getElementById("rremain").textContent=money(remaining);
  document.getElementById("rmonthly").textContent=
-  "Rs "+monthly.toLocaleString("en-PK",{minimumFractionDigits:2,maximumFractionDigits:2});
+ "Rs "+monthly.toLocaleString("en-PK",{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 function shareResult(){
  const text=[
  "Azeez Mobile Hub",
  "Mobile: "+document.getElementById("rmodel").textContent,
  "Cash Price: "+document.getElementById("rcash").textContent,
- "Profit: "+document.getElementById("rprofit").textContent,
+ "Profit: "+document.getElementById("rrate").textContent+
+ " ("+document.getElementById("rprofit").textContent+")",
  "Selling Price: "+document.getElementById("rsale").textContent,
  "Advance: "+document.getElementById("radv").textContent,
  "Remaining: "+document.getElementById("rremain").textContent,
